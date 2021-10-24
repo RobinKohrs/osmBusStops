@@ -47,12 +47,36 @@ def buildQueries(data, times):
 
     return queries_all_origins
 
+def getCoords(data):
 
-def sendqueries_savedata(queries):
+    coords = data["response"]["isoline"][0]["component"][0]["shape"]
+    coords = [[x.split(",")[1],x.split(",")[0]] for x in coords]
+
+    return coords
+
+
+def makeGj(coords, ID, r):
+    gj = {"type": "Feature", "properties": {"id": ID, "range": r}, "geometry": {"type": "Polygon", "coordinates": [coords]}}
+    return gj
+
+def sendqueries_savedata(queries, data_dir):
 
     for origin in queries:
+        results_one_origin = []
         for t in origin:
-
+            # one file for each origin and time
+            ID = t["id"]
+            r =  t["params"]["range"]
+            f = f'{data_dir}/{ID}_{r}.json'
+            if not os.path.isfile(f):
+                resp = requests.get(url, t["params"])
+                data = resp.json()
+                coords = getCoords(data)
+                gj = makeGj(coords, ID, r)
+                print(gj)
+                with open(f, "w") as file:
+                    json.dump(gj, file)
+                    exit()
 
 def main():
 
@@ -66,7 +90,11 @@ def main():
     queries = buildQueries(data, times)
 
     ## send queries and save data
-    sendqueries_savedata(queries)
+    data_dir = "./data"
+    if not os.path.isdir(data_dir):
+        os.mkdir(data_dir)
+
+    sendqueries_savedata(queries, data_dir)
 
 
 if __name__ == "__main__":
