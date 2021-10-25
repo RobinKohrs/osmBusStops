@@ -49,13 +49,16 @@ public_transport = regions %>% split(., .$NAME_1) %>% lapply(., function(x) {
 
 
 # shape of austria --------------------------------------------------------
-grid = st_make_grid(austria, cellsize = .1, square = F)
+grid = st_make_grid(austria, cellsize = .8, square = F)
 grid_centroids = st_centroid(grid) %>% st_as_sf()
 pts = grid_centroids[austria, ] %>% mutate(id = row_number())
 
 
 # write out the points ----------------------------------------------------
 pts_path = here("data/stations.geojson")
+if(file.exists(pts_path)){
+  file.remove(pts_path)
+}
 st_write(pts, pts_path)
 
 
