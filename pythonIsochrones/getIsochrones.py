@@ -3,8 +3,11 @@ import json
 import os
 import sys
 import re
+import random
+import subprocess
+import math
 
-key = "r7q-nvV9wqOzMKfEQpcE0d-yfzrnamM-dh-7PPN3yCM"
+key = "AttyqYk0OQNaMJY7MIDLF2nD1Fm3qCnyYMyO70qdPX8"
 url = "https://isoline.route.ls.hereapi.com/routing/7.2/calculateisoline.json"
 
 
@@ -72,27 +75,39 @@ def sendqueries_savedata(queries, data_dir):
 
     # for each origin
     for i, origin in enumerate(queries):
-        sys.stdout.write(f"Processing: {i} / {len_origins} origins\r")
+        print(f"\nProcessing: {i} / {len_origins} origins")
+        # sys.stdout.write(f"\nProcessing: {i} / {len_origins} origins\r")
 
         results_one_origin = []
 
         # for each time
-        for t in origin:
+        for i, t in enumerate(origin):
             # one file for each origin and time
             ID = t["id"]
             r = t["params"]["range"]
+
+            sys.stdout.write(f"    Getting: {r} minutes \r")
+
+            # check if file aready present
             f = f'{data_dir}/{ID}_{r}.json'
             if not os.path.isfile(f):
-                resp = requests.get(url, t["params"])
-                if resp.ok:
-                    data = resp.json()
-                    coords = getCoords(data)
-                    gj = makeGj(coords, ID, r)
-                    with open(f, "w") as file:
-                        json.dump(gj, file)
-                else:
-                    with open(f, "w") as file:
-                        json.dump({"resp": "No way possible"}, file)
+                print(f"{f} does not yet exist")
+                try:
+                    resp = requests.get(url, t["params"], timeout=None)
+                    if resp.ok:
+                        data = resp.json()
+                        coords = getCoords(data)
+                        gj = makeGj(coords, ID, r)
+                        with open(f, "w") as file:
+                            json.dump(gj, file)
+                    else:
+                        with open(f, "w") as file:
+                            json.dump({"resp": "No way possible"}, file)
+                except:
+                    continue
+            else:
+                print(f"{f} does already exist")
+                continue
 
     return
 
@@ -112,15 +127,16 @@ def buildMultipolygons(paths, data_dir):
 
             multiPoly = {"type": "FeatureCollection",
                          "features": []}
-            reg = r"_" + t
-            files = [x for x in paths if t in x]
+            # reg = r"_" + t + "$"
+            pat = re.compile(".*_" + t + ".json$")
+            files = [x for x in paths if pat.match(x)]
 
             for origin in files:
                 try:
                     with open(origin, "r") as file:
                         singlePoly = json.load(file)
-                        print(type(singlePoly["geometry"]
-                              ["coordinates"][0][0][0]))
+                        # print(type(singlePoly["geometry"]
+                        #       ["coordinates"][0][0][0]))
                         multiPoly["features"].append(singlePoly)
                 except:
                     continue
@@ -129,15 +145,33 @@ def buildMultipolygons(paths, data_dir):
                 json.dump(multiPoly, outFile)
 
 
+def rasterize(indir, outdir):
+    mp = [os.path.join(indir, f)
+          for f in os.listdir(indir) if f.endswith(".geojson")]
+
+    for m in mp:
+        filename, extenstion = os.path.splitext(m)
+        outfile = os.path.join(outdir, filename.split("/")[-1]) + ".tif"
+
+        # -a_nodata 0
+        cmd = f"gdal_rasterize -burn 255 -burn 0 -burn 0 -burn 100 -at -tr .005 .005 -ot Byte {m} {outfile}"
+        subprocess.run(cmd, shell=True)
+
+    return mp
+
+
 def main():
 
     # get the coordinates and the ids from the stations geojson
-    stations = "../osmBusStops/data/stations.geojson"
+    stations = "./stations.geojson"
     data = readData(stations)
+    # data = random.sample(data, 10000)
 
     # build the queries
     # the structure is mulitple queries for one origin for all times
-    times = [x * 60 for x in range(1, 30, 5)]
+    times = [5, 10, 15, 20, 30, 45, 60, 90, 120]
+    times = [x * 60 for x in times]
+
     queries = buildQueries(data, times)
 
     # send queries and save data
@@ -155,6 +189,15 @@ def main():
     if not os.path.isdir(data_all):
         os.mkdir(data_all)
     multipolygons = buildMultipolygons(gjs, data_all)
+
+    # rasterize the multipolygons
+    raster_dir = os.path.join(data_all, "raster")
+    if not os.path.isdir(raster_dir):
+        os.mkdir(raster_dir)
+
+    res = rasterize(data_all, raster_dir)
+    print()
+    print(res)
 
 
 if __name__ == "__main__":

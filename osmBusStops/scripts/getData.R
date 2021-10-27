@@ -46,20 +46,33 @@ public_transport = regions %>% split(., .$NAME_1) %>% lapply(., function(x) {
 }) %>% rbindlist(idcol = "region") %>% st_as_sf()
 
 
+# read shape for austria ---------------------------------------------------------------
+aus = readRDS(path_austria)
+public_transport = public_transport[aus, ]
+
+# filter the data ---------------------------------------------------------
+public_transport %>%
+  mutate(x = st_coordinates(.)[, 1],
+         y = st_coordinates(.)[, 2]) %>%
+  st_drop_geometry() %>%
+  distinct(name, .keep_all = T) %>%
+  st_as_sf(., coords = c("x", "y"), crs = 4326) %>% 
+  mutate(
+    id  = row_number()
+  ) -> filt
 
 
-# shape of austria --------------------------------------------------------
-grid = st_make_grid(austria, cellsize = .8, square = F)
-grid_centroids = st_centroid(grid) %>% st_as_sf()
-pts = grid_centroids[austria, ] %>% mutate(id = row_number())
+st_write(filt, "/home/robin/projects/dst/qgis/isochrones_poi/filtered.gpkg")
+st_write(public_transport, "/home/robin/projects/dst/qgis/isochrones_poi/pb.gpkg")
 
 
-# write out the points ----------------------------------------------------
-pts_path = here("data/stations.geojson")
+# write out the points to the python dir  ----------------------------------
+pts_path = "../pythonIsochrones/stations.geojson"
 if(file.exists(pts_path)){
   file.remove(pts_path)
 }
-st_write(pts, pts_path)
+
+st_write(filt, pts_path)
 
 
 
