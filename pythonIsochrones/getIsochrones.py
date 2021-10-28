@@ -119,6 +119,8 @@ def buildMultipolygons(paths, data_dir):
     # for each time, get all the matching sinlge polgons
     for i, t in enumerate(unique_numbers):
 
+        sys.stdout.write(f"Bulding Multipolygon for: {t} minutes")
+
         # file for all polgons with one time duration
         f = f"{data_dir}/{t}_all.geojson"
         if not os.path.isfile(f):
@@ -163,18 +165,20 @@ def rasterize(indir, outdir):
 def main():
 
     # get the coordinates and the ids from the stations geojson
-    stations = "./stations.geojson"
+    # stations = "./stations.geojson"
+    # stations = "./missing.geojson"
+    stations = "../../../../Desktop/missing.geojson"
     data = readData(stations)
     # data = random.sample(data, 10000)
 
-    # build the queries
-    # the structure is mulitple queries for one origin for all times
+    # # build the queries
+    # # the structure is mulitple queries for one origin for all times
     times = [5, 10, 15, 20, 30, 45, 60, 90, 120]
     times = [x * 60 for x in times]
 
     queries = buildQueries(data, times)
 
-    # send queries and save data
+    # # send queries and save data
     data_dir = "./data"
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)

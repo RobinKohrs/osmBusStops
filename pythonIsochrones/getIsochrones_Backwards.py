@@ -164,15 +164,16 @@ def main():
 
     # get the coordinates and the ids from the stations geojson
     stations = "./stations.geojson"
-    data = readData(stations)
-    # data = random.sample(data, 10000)
+    # stations = "../../../../Desktop/missing.geojson"
+    # data = readData(stations)
+    # # data = random.sample(data, 10000)
 
-    # build the queries
-    # the structure is mulitple queries for one origin for all times
+    # # build the queries
+    # # the structure is mulitple queries for one origin for all times
     times = [5, 10, 15, 20, 30, 45, 60, 90, 120]
     times = [x * 60 for x in times]
 
-    queries = buildQueries(data, times)
+    # queries = buildQueries(data, times)
 
     # send queries and save data
     data_dir = "./data"
