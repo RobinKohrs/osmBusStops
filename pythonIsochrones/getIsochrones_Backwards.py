@@ -154,7 +154,7 @@ def rasterize(indir, outdir):
         outfile = os.path.join(outdir, filename.split("/")[-1]) + ".tif"
 
         # -a_nodata 0
-        cmd = f"gdal_rasterize -burn 255 -burn 0 -burn 0 -burn 100 -at -tr .005 .005 -ot Byte {m} {outfile}"
+        cmd = f"gdal_rasterize -burn 255 -burn 0 -burn 0 -burn 50 -at -tr .005 .005 -ot Byte {m} {outfile}"
         subprocess.run(cmd, shell=True)
 
     return mp
